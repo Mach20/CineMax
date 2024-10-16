@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/estilos.css">
+    <title>Panel de Administración</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1, h2 {
+            color: #444;
+        }
+
+        form {
+            background: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="text"], 
+        input[type="file"], 
+        select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            padding: 10px 15px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #218838;
+        }
+
+        #movieList {
+            background: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #movieList div {
+            border-bottom: 1px solid #eee;
+            padding: 10px 0;
+        }
+
+        #movieList img {
+            max-width: 100px;
+            height: auto;
+            margin-right: 15px;
+        }
+
+        #searchInput {
+            width: calc(100% - 110px);
+            display: inline-block;
+        }
+
+        #searchButton {
+            display: inline-block;
+            width: 100px;
+        }
+
+        @media (max-width: 600px) {
+            #searchInput {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>Panel de Administración</h1>
+
+    <h2>Agregar/Editar Películas</h2>
+    <form id="addMovieForm" enctype="multipart/form-data">
+        <input type="hidden" id="movieId"> <!-- Para almacenar el ID de la película a editar -->
+        <label for="movieTitle">Título de la película:</label>
+        <input type="text" id="movieTitle" required>
+
+        <label for="movieGenre">Géneros:</label>
+        <select id="movieGenre" multiple required>
+            <option value="Acción">Acción</option>
+            <option value="Aventura">Aventura</option>
+            <option value="Animación">Animación</option>
+            <option value="Ciencia ficción">Ciencia ficción</option>
+            <option value="Crimen">Crimen</option>
+            <option value="Drama">Drama</option>
+            <option value="Familia">Familia</option>
+            <option value="Fantasía">Fantasía</option>
+            <option value="Misterio">Misterio</option>
+            <option value="Romance">Romance</option>
+            <option value="Suspense">Suspense</option>
+            <option value="Terror">Terror</option>
+        </select>
+
+        <label for="movieFile">Archivo de la película (formato .mp4):</label>
+        <input type="file" id="movieFile" accept="video/mp4">
+
+        <label for="moviePoster">Portada de la película:</label>
+        <input type="file" id="moviePoster" accept="image/*">
+
+        <button type="submit">Guardar Película</button>
+    </form>
+
+    <h2>Buscar Películas</h2>
+    <input type="text" id="searchInput" placeholder="Buscar por nombre..." />
+    <button id="searchButton">Buscar</button>
+    <div id="movieList"></div>
+
+    <script>
+        // Agregar/editar película
+        document.getElementById('addMovieForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const title = document.getElementById('movieTitle').value;
+            const genres = Array.from(document.getElementById('movieGenre').selectedOptions).map(option => option.value);
+            const movieFile = document.getElementById('movieFile').files[0];
+            const posterFile = document.getElementById('moviePoster').files[0];
+            const movieId = document.getElementById('movieId').value;
+            const movies = JSON.parse(localStorage.getItem('movies')) || [];
+
+            // Solo leer los archivos si se han subido nuevos
+            let movieURL = '';
+            let posterURL = '';
+            if (movieFile) movieURL = URL.createObjectURL(movieFile);
+            if (posterFile) posterURL = URL.createObjectURL(posterFile);
+
+            if (movieId) {
+                const movieIndex = movies.findIndex(movie => movie.id == movieId);
+                if (movieIndex > -1) {
+                    // Actualizar solo los campos que se han cambiado
+                    movies[movieIndex].title = title;
+                    movies[movieIndex].genres = genres;
+                    if (movieFile) movies[movieIndex].video = movieURL;
+                    if (posterFile) movies[movieIndex].poster = posterURL;
+
+                    alert(`Película "${title}" editada con éxito.`);
+                }
+            } else {
+                const movieData = {
+                    id: Date.now(),
+                    title,
+                    genres,
+                    video: movieURL || '',
+                    poster: posterURL || ''
+                };
+                movies.push(movieData);
+                alert(`Película "${title}" agregada con éxito.`);
+            }
+
+            localStorage.setItem('movies', JSON.stringify(movies));
+            document.getElementById('addMovieForm').reset();
+            document.getElementById('movieId').value = '';
+            displayMovies();
+        });
+
+        // Mostrar películas
+        function displayMovies() {
+            const movies = JSON.parse(localStorage.getItem('movies')) || [];
+            const movieList = document.getElementById('movieList');
+            movieList.innerHTML = ''; // Limpiar lista
+
+            movies.forEach(movie => {
+                const movieDiv = document.createElement('div');
+                movieDiv.innerHTML = `
+                    <h3>${movie.title}</h3>
+                    <p>Géneros: ${movie.genres.join(', ')}</p>
+                    <img src="${movie.poster}" alt="${movie.title}" style="width: 100px; height: auto;">
+                    <button onclick="editMovie(${movie.id})">Editar</button>
+                    <button onclick="deleteMovie(${movie.id})">Eliminar</button>
+                `;
+                movieList.appendChild(movieDiv);
+            });
+        }
+
+        // Llamar a displayMovies al cargar la página
+        window.onload = function() {
+            displayMovies(); // Mostrar las películas al cargar
+        };
+
+        // Función para editar película
+        function editMovie(id) {
+            const movies = JSON.parse(localStorage.getItem('movies')) || [];
+            const movie = movies.find(movie => movie.id == id);
+            if (movie) {
+                document.getElementById('movieId').value = movie.id;
+                document.getElementById('movieTitle').value = movie.title;
+
+                // Establecer los géneros seleccionados
+                const genreSelect = document.getElementById('movieGenre');
+                for (let option of genreSelect.options) {
+                    option.selected = movie.genres.includes(option.value);
+                }
+            }
+        }
+
+        // Función para eliminar película
+        function deleteMovie(id) {
+            const movies = JSON.parse(localStorage.getItem('movies')) || [];
+            const filteredMovies = movies.filter(movie => movie.id != id);
+            localStorage.setItem('movies', JSON.stringify(filteredMovies));
+            displayMovies(); // Actualizar la lista de películas
+            alert('Película eliminada con éxito.');
+        }
+
+        // Búsqueda en tiempo real (opcional)
+        document.getElementById('searchInput').addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const movies = JSON.parse(localStorage.getItem('movies')) || [];
+            const movieList = document.getElementById('movieList');
+            movieList.innerHTML = ''; // Limpiar lista
+
+            const filteredMovies = movies.filter(movie => movie.title.toLowerCase().includes(searchTerm));
+            filteredMovies.forEach(movie => {
+                const movieDiv = document.createElement('div');
+                movieDiv.innerHTML = `
+                    <h3>${movie.title}</h3>
+                    <p>Géneros: ${movie.genres.join(', ')}</p>
+                    <img src="${movie.poster}" alt="${movie.title}" style="width: 100px; height: auto;">
+                    <button onclick="editMovie(${movie.id})">Editar</button>
+                    <button onclick="deleteMovie(${movie.id})">Eliminar</button>
+                `;
+                movieList.appendChild(movieDiv);
+            });
+
+            if (filteredMovies.length === 0) {
+                movieList.innerHTML = '<p>No se encontraron películas.</p>';
+            }
+        });
+    </script>
+</body>
+</html>
